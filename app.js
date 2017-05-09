@@ -44,8 +44,8 @@ connection.query('CREATE TABLE IF NOT EXISTS USER (ID INTEGER NOT NULL AUTO_INCR
 var transporter = nodemailer.createTransport({
      service: 'Gmail', // no need to set host or port etc.
      auth: {
-         user: 'mykhailo.behei@gmail.com',
-         pass: 'Mishabehey1996'
+         user: 'INPUT YOUR GMAIL ACCOUNT HERE',
+         pass: 'INPUT YOUR GMAIL ACCOUNT HERE'
      }
 });
 
