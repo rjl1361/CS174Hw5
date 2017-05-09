@@ -5,7 +5,11 @@ var path = require('path'); // for directory paths
 var config = require(path.join(__dirname, 'config')); // has our keys
 var request = require('request'); // to make backend requests to stripe
 var mysql = require('mysql');
+var nodemailer = require('nodemailer');
+
 var app = express();
+
+
 app.use(body_parser.urlencoded({extended: true}));
 
 // view engine setup
@@ -37,6 +41,14 @@ connection.query('CREATE TABLE IF NOT EXISTS USER (ID INTEGER NOT NULL AUTO_INCR
     if (err) throw err;
 });
 
+var transporter = nodemailer.createTransport({
+     service: 'Gmail', // no need to set host or port etc.
+     auth: {
+         user: 'mykhailo.behei@gmail.com',
+         pass: 'Mishabehey1996'
+     }
+});
+
 app.get('/', function(req, res) {
   res.render('index', { 'PUBLISHABLE_KEY': config.PUBLISHABLE_KEY });
 });
@@ -47,6 +59,21 @@ app.post('/charge', function(req, res) {
 
     var currentTime = Math.floor(new Date() / 1000);
     console.log(currentTime);
+
+    var options = {
+    from: 'mykhailo.behei@gmail.com', // sender address
+    to: incomingEmail, // list of receivers
+    subject: 'Nodemailer for Node JS testing', // Subject line
+    text: 'Not-Dead-Yet...Time to Check-in! \n Dear ' + incomingEmail + ' \n Please click the link below or copy it into your browser to check-in \n check_in_url \n Best regards, Not-Dead-Yet Team', // plain text body
+    //html: 'This is just a test.' // html body
+    };
+    transporter.sendMail(options, function(error, info) {
+    if (error) {
+        return console.log(error);
+        }
+    });
+    // console.log('Message Sent. Id: %s Res: %s', info.messageId, info.response);
+
     var lastID = connection.query('SELECT LAST_INSERT_ID()');
     var post = {ID: lastID, LAST_CHECK_IN: currentTime, LAST_EMAIL_SENT: 0, NOTIFY_LIST: "", MESSAGE: "" };
     var query = connection.query('INSERT INTO USER SET ?', post, function(err,res) {
