@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head><title>Credit Card Test</title></head>
+<body>
+<form id="purchase-stuff-form" method="post" action="/charge">
+<input type="hidden" id="credit-token"  name="credit_token" value="" />
+<p><label for="email">Email:</label><input type="text" id="email" size="20" name="email"></p>
+<p><label for="amount">Amount:</label><input type="text" id="amount"
+    size="2" name="amount" /></p>
+<p><label for="card-number">Card Number:</label><input type="text"
+    id="card-number" size="20" data-stripe='number'
+    name="card-number" /></p>
+<p><label for="cvc">CVC:</label><input type="text" id="cvc" size="4"
+    data-stripe='cvc' name="cvc" /></p>
+<p><label for="exp-month">Expiration Month:</label><input type="text"
+    id="exp-month" size="2" data-stripe='exp-month' name="exp-month" /></p>
+<p><label for="exp-year">Expiration Year:</label><input type="text"
+    id="exp-year" size="2" data-stripe='exp-year' name="exp-year" /></p>
+<p><input type="submit" id="purchase" name="Purchase" value="Purchase"></p>
+</form>
+<script type="text/javascript">
+    var mysql = require('mysql');
+    var connection = mysql.createConnection()
+
+
+</script>
+<script>
+function elt(id)
+{
+    return document.getElementById(id);
+}
+elt('purchase').onclick = function(event) {
+    var purchase_form = elt('purchase-stuff-form');
+    elt('purchase').disabled = true; // prevent additional clicks
+    Stripe.card.createToken(purchase_form, tokenResponseHandler);
+    event.preventDefault(); //prevent form submitting till get all clear
+}
+function tokenResponseHandler(status, response) 
+{
+    var purchase_form = elt('purchase-stuff-form');
+    if (response.error) {
+        alert(response.error.message);
+        elt('purchase').disabled = false;
+    } else {
+        elt('credit-token').value = response.id;
+        purchase_form.submit();
+    }
+}
+</script>
+<script src="https://js.stripe.com/v2/"  ></script>
+<script>
+Stripe.setPublishableKey('<%=PUBLISHABLE_KEY %>');
+</script>
+</body>
+</html>
