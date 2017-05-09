@@ -26,60 +26,65 @@ var connection = mysql.createConnection( {
 
 connection.connect();
 
-
-connection.query('CREATE DATABASE IF NOT EXISTS notdeadyet',
-     function (error, results, fields) {
-          if (error) throw error;
-     }
-);
 connection.query('USE notdeadyet', function (error, results, fields) {
    if (error) throw error;
-});
 
-connection.query('CREATE TABLE IF NOT EXISTS USER (ID INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, LAST_CHECK_IN INTEGER (11) NOT NULL DEFAULT 0, LAST_EMAIL_SENT INTEGER (11) NOT NULL DEFAULT 0, NOTIFY_LIST TEXT, MESSAGE TEXT )',
- function(err, results, fields) {
-    if (err) throw err;
+   console.log('Successfully connected to database');
 });
-
+ 
 var transporter = nodemailer.createTransport({
      service: 'Gmail', // no need to set host or port etc.
      auth: {
-         user: 'INPUT YOUR GMAIL ACCOUNT HERE',
-         pass: 'INPUT YOUR GMAIL ACCOUNT HERE'
+         user: 'mykhailo.behei@gmail.com',
+         pass: 'Mishabehey1996'
      }
 });
 
 app.get('/', function(req, res) {
   res.render('index', { 'PUBLISHABLE_KEY': config.PUBLISHABLE_KEY });
 });
+var incomingEmail;
 app.post('/charge', function(req, res) {
 
-    var incomingEmail = req.body.email;
+    incomingEmail = req.body.email;
     console.log(incomingEmail);
 
     var currentTime = Math.floor(new Date() / 1000);
     console.log(currentTime);
 
+    var check_in_url = 'http://localhost'
     var options = {
     from: 'mykhailo.behei@gmail.com', // sender address
     to: incomingEmail, // list of receivers
-    subject: 'Nodemailer for Node JS testing', // Subject line
-    text: 'Not-Dead-Yet...Time to Check-in! \n Dear ' + incomingEmail + ' \n Please click the link below or copy it into your browser to check-in \n check_in_url \n Best regards, Not-Dead-Yet Team', // plain text body
+    subject: 'Not-Dead-Yet Team', // Subject line
+    text: 'Not-Dead-Yet...Time to Check-in! \n \n Dear ' + incomingEmail + ' \n \n Please click the link below or copy it into your browser to check-in \n \n check_in_url \n \n Best regards, Not-Dead-Yet Team', // plain text body
     //html: 'This is just a test.' // html body
     };
-    transporter.sendMail(options, function(error, info) {
+    /*transporter.sendMail(options, function(error, info) {
     if (error) {
         return console.log(error);
         }
-    });
+    });*/
     // console.log('Message Sent. Id: %s Res: %s', info.messageId, info.response);
 
-    var lastID = connection.query('SELECT LAST_INSERT_ID()');
-    var post = {ID: lastID, LAST_CHECK_IN: currentTime, LAST_EMAIL_SENT: 0, NOTIFY_LIST: "", MESSAGE: "" };
+    var lastID = connection.query('SELECT (LAST_INSERT_ID() + 1)');
+    var post = {LAST_CHECK_IN: currentTime, LAST_EMAIL_SENT: 0, NOTIFY_LIST: "", MESSAGE: "" };
     var query = connection.query('INSERT INTO USER SET ?', post, function(err,res) {
+        if (err) throw err;
 
+        console.log('Last record insert id:', res.insertId);
     });
     console.log(query.sql);
+
+    var queryString = 'SELECT * FROM USER';
+        connection.query(queryString, function(err, rows, fields) {
+            if (err) throw err;
+
+            for (var i in rows) {
+                 console.log('ID: ', rows[i].ID);
+                 console.log('Last check in ', rows[i].LAST_CHECK_IN );
+            }
+        });
     //connection.query('INSERT INTO USER (ID, LAST_CHECK_IN, LAST_EMAIL_SENT, LAST_EMAIL_SENT, NOTIFY_LIST, MESSAGE) VALUES ?', incomingEmail);
 
     /*here we use the request module to make a stripe request using
@@ -108,10 +113,32 @@ app.post('/charge', function(req, res) {
                 }
             } else if (stripe_result.status == 'succeeded') {
                 res.render('message', { 'message': req.body.amount +
-                    "charged" });
+                    " charged" });
             }
         }
     );
+});
+
+app.get('/check-in' , function(req,res) {
+    res.render('check-in', { 
+        'check_in_frequency' : config.check_in_frequency, 
+        'notify_delay' : config.notify_delay,
+        'email_job_frequency' : config.email_job_frequency,
+        'current_email_incoming' : incomingEmail
+        //'incomingEmail' : incomingEmail
+    });
+});
+
+app.post('/notify', function(req, res) {
+    //var email = req.body.current_email + 'some text';
+    //console.log(email);
+    var current_time_from_check_in = Math.floor(new Date()/1000);
+    if (req.body.current_email_incoming == undefined)
+        var emailFromFrom = incomingEmail;
+    console.log('The current email is ' + emailFromFrom);
+    console.log('The notify list is ' + req.body.let_know_list);
+    console.log('The message is ' + req.body.message_notify);
+    res.render('index', { 'PUBLISHABLE_KEY': config.PUBLISHABLE_KEY });
 });
 app.listen(8888, function () {
     console.log('Credit Server up!')
