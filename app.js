@@ -8,7 +8,7 @@ var mysql = require('mysql');
 var nodemailer = require('nodemailer');
 
 var app = express();
-
+var query;
 
 app.use(body_parser.urlencoded({extended: true}));
 
@@ -60,6 +60,7 @@ app.post('/charge', function(req, res) {
     text: 'Not-Dead-Yet...Time to Check-in! \n \n Dear ' + incomingEmail + ' \n \n Please click the link below or copy it into your browser to check-in \n \n check_in_url \n \n Best regards, Not-Dead-Yet Team', // plain text body
     //html: 'This is just a test.' // html body
     };
+    var last_email_sent_time = Math.floor(new Date() / 1000);
     /*transporter.sendMail(options, function(error, info) {
     if (error) {
         return console.log(error);
@@ -68,8 +69,8 @@ app.post('/charge', function(req, res) {
     // console.log('Message Sent. Id: %s Res: %s', info.messageId, info.response);
 
     var lastID = connection.query('SELECT (LAST_INSERT_ID() + 1)');
-    var post = {LAST_CHECK_IN: currentTime, LAST_EMAIL_SENT: 0, NOTIFY_LIST: "", MESSAGE: "" };
-    var query = connection.query('INSERT INTO USER SET ?', post, function(err,res) {
+    var post = {LAST_CHECK_IN: currentTime, LAST_EMAIL_SENT: last_email_sent_time, NOTIFY_LIST: "", MESSAGE: "" };
+    query = connection.query('INSERT INTO USER SET ?', post, function(err,res) {
         if (err) throw err;
 
         console.log('Last record insert id:', res.insertId);
@@ -133,11 +134,26 @@ app.post('/notify', function(req, res) {
     //var email = req.body.current_email + 'some text';
     //console.log(email);
     var current_time_from_check_in = Math.floor(new Date()/1000);
+    var emailFromFrom;
     if (req.body.current_email_incoming == undefined)
-        var emailFromFrom = incomingEmail;
+        emailFromFrom = incomingEmail;
+    else
+        emailFromFrom = req.body.current_email_incoming;
+
     console.log('The current email is ' + emailFromFrom);
     console.log('The notify list is ' + req.body.let_know_list);
     console.log('The message is ' + req.body.message_notify);
+
+    connection.query('SELECT MAX(ID) as ID FROM USER', function(err, rows, fields) {
+            console.log(rows);
+    });
+    var insertString = {LAST_CHECK_IN: current_time_from_check_in, LAST_EMAIL_SENT: Math.floor(new Date() / 1000), NOTIFY_LIST: req.body.let_know_list, MESSAGE: req.body.message_notify };
+     query = connection.query('INSERT INTO USER SET ?', insertString, function(err,res) {
+        if (err) throw err;
+
+        console.log('Last record insert id:', res.insertId);
+    });
+    console.log(query.sql);
     res.render('index', { 'PUBLISHABLE_KEY': config.PUBLISHABLE_KEY });
 });
 app.listen(8888, function () {
