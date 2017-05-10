@@ -83,7 +83,7 @@ app.post('/charge', function(req, res) {
 
             for (var i in rows) {
                  console.log('ID: ', rows[i].ID);
-                 console.log('Last check in ', rows[i].LAST_CHECK_IN );
+                 console.log('The LAST_CHECK_IN row in database in ', rows[i].LAST_CHECK_IN );
             }
         });
     //connection.query('INSERT INTO USER (ID, LAST_CHECK_IN, LAST_EMAIL_SENT, LAST_EMAIL_SENT, NOTIFY_LIST, MESSAGE) VALUES ?', incomingEmail);
@@ -121,12 +121,29 @@ app.post('/charge', function(req, res) {
 });
 
 app.get('/check-in' , function(req,res) {
-    res.render('check-in', { 
-        'check_in_frequency' : config.check_in_frequency, 
-        'notify_delay' : config.notify_delay,
-        'email_job_frequency' : config.email_job_frequency,
-        'current_email_incoming' : incomingEmail
-        //'incomingEmail' : incomingEmail
+    connection.query('SELECT * FROM USER ORDER BY ID DESC LIMIT 1', function(err, rows, fields) {
+        if (err) throw err;
+        else
+        {
+            //var last_check_in_time= rows[0].LAST_CHECK_IN;
+            var date = new Date(rows[0].LAST_CHECK_IN * 1000); //convert to milliseconds from seconds
+            var day = date.getDay();
+            var month = date.getMonth();
+            var year = date.getFullYear();
+            var hours = date.getHours();
+            var minutes = date.getMinutes();
+            var seconds = date.getUTCSeconds();
+
+            var lastCheckInString = day + '-' + month + '-' + year + ' ' + hours + ':' + minutes + ':' + seconds + '.';
+
+            res.render('check-in', {
+                'check_in_frequency' : config.check_in_frequency, 
+                'notify_delay' : config.notify_delay,
+                'email_job_frequency' : config.email_job_frequency,
+                'current_email_incoming' : incomingEmail,
+                'last_check_in' : lastCheckInString
+            });
+        }
     });
 });
 
@@ -143,9 +160,10 @@ app.post('/notify', function(req, res) {
     console.log('The current email is ' + emailFromFrom);
     console.log('The notify list is ' + req.body.let_know_list);
     console.log('The message is ' + req.body.message_notify);
-
-    connection.query('SELECT MAX(ID) as ID FROM USER', function(err, rows, fields) {
-            console.log(rows);
+    //var last_check_in_time;
+    connection.query('SELECT * FROM USER ORDER BY ID DESC LIMIT 1', function(err, rows, fields) {
+            last_check_in_time_global = rows[0].LAST_CHECK_IN;
+            console.log('last_check_in_time_global ' + last_check_in_time_global );
     });
     var insertString = {LAST_CHECK_IN: current_time_from_check_in, LAST_EMAIL_SENT: Math.floor(new Date() / 1000), NOTIFY_LIST: req.body.let_know_list, MESSAGE: req.body.message_notify };
      query = connection.query('INSERT INTO USER SET ?', insertString, function(err,res) {
@@ -153,7 +171,7 @@ app.post('/notify', function(req, res) {
 
         console.log('Last record insert id:', res.insertId);
     });
-    console.log(query.sql);
+
     res.render('index', { 'PUBLISHABLE_KEY': config.PUBLISHABLE_KEY });
 });
 app.listen(8888, function () {
